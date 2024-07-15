@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 'use client'
 
+import AudioRecorder from "@/components/AudioRecorder";
 import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
 import io from "socket.io-client";
@@ -8,9 +9,11 @@ import io from "socket.io-client";
 const socket = io('http://localhost:5000');  // Reemplaza con la URL de tu servidor Socket.IO
 
 export default function Home() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [duration, setDuration] = useState(0);
-  const [link, setLink] = useState('/mcqueen-image.png');
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [duration, setDuration] = useState(0)
+  const [link, setLink] = useState('/mcqueen-image.png')
+  const [transcript, setTranscript] = useState('')
+  const [url, setUrl] = useState('')
 
   const handleVideoLoaded = () => {
     if (videoRef.current) {
@@ -21,27 +24,35 @@ export default function Home() {
 
   const handleClick = () => {
     // Emitir evento al servidor para generar el video
-    socket.emit('generate_video')
+    socket.emit('generate_video', transcript)
 
     // Cambiar el enlace para mostrar el video en la interfaz
     // setLink('/mcqueen-video.mp4');
-  };
+  }
 
   useEffect(() => {
     socket.on('connect', () => {
       console.log('Connected to server')
-    });
+    })
 
     socket.on('message', (data) => {
       console.log(data)
-      console.log(data)
-    });
+      const foo = async () => {
+        const res = await fetch('http://localhost:5000/video', {method: 'GET'})
+        console.log(res)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob);
+        setUrl(url)
+      }
+      foo()
+      setLink('/mcqueen-video.mp4')
+    })
 
     return () => {
       socket.off('connect')
       socket.off('message')
-    };
-  }, []);
+    }
+  }, [])
 
   useEffect(() => {
     if (videoRef.current && link === '/mcqueen-video.mp4') {
@@ -82,18 +93,22 @@ export default function Home() {
             width={600}
             height={600}
             className="rounded-md"
-            src={`/mcqueen-video.mp4`} // Accede al video en la carpeta public
+            src={url} // Accede al video en la carpeta public
             autoPlay={true}
           />
         )}
       </div>
-      <div>
+      <div className="flex flex-row gap-2">
+        <AudioRecorder
+          transcript={transcript}
+          setTranscript={setTranscript}
+        />
         <button
-          className="border-4 border-gray-700 rounded-md p-2 bg-gray-300"
+          className="border-2 border-gray-700 rounded-md p-2 bg-gray-300"
           onClick={handleClick}
           disabled={link === '/mcqueen-video.mp4'}
         >
-          Hablar
+          Enviar
         </button>
       </div>
     </div>
